@@ -1,6 +1,7 @@
 /**
  * STACKD Kiosk Settings — Electron Main Process
- * Manages settings file I/O, API proxy calls, and printer TCP checks.
+ * Manages settings file I/O, API proxy calls, printer TCP checks,
+ * device serial validation, and password-protected access.
  */
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
@@ -8,6 +9,49 @@ const fs = require('fs');
 const net = require('net');
 const https = require('https');
 const http = require('http');
+const { execSync } = require('child_process');
+const crypto = require('crypto');
+
+// ─── Device Serial Number ───────────────────────────────────
+
+function getMachineSerialNumber() {
+  try {
+    // Windows: get motherboard serial via WMIC
+    const raw = execSync('wmic bios get serialnumber', { encoding: 'utf-8', timeout: 5000 });
+    const lines = raw.trim().split('\n').map(l => l.trim()).filter(Boolean);
+    // Second line is the actual serial (first is header "SerialNumber")
+    const serial = lines.length > 1 ? lines[1] : null;
+    if (serial && serial !== 'SerialNumber' && serial.length > 2) {
+      console.log('[Serial] Machine serial:', serial);
+      return serial;
+    }
+  } catch (e) {
+    console.warn('[Serial] WMIC failed, trying PowerShell...');
+  }
+  try {
+    const raw = execSync(
+      'powershell -Command "(Get-WmiObject Win32_BIOS).SerialNumber"',
+      { encoding: 'utf-8', timeout: 5000 }
+    );
+    const serial = raw.trim();
+    if (serial && serial.length > 2) {
+      console.log('[Serial] Machine serial (PS):', serial);
+      return serial;
+    }
+  } catch (e2) {
+    console.error('[Serial] Failed to get serial:', e2.message);
+  }
+  return null;
+}
+
+/** Generate same password hash as ControlPanel backend */
+function generatePasswordHash(serialNo, companySettingId) {
+  const raw = `${serialNo}:${companySettingId || 'APEX'}`;
+  const hash = crypto.createHash('sha256').update(raw, 'utf-8').digest('hex');
+  return hash.substring(0, 8).toUpperCase();
+}
+
+const MACHINE_SERIAL = getMachineSerialNumber();
 
 // ─── Settings File ──────────────────────────────────────────
 const SETTINGS_FILENAME = 'settings.json';
@@ -298,6 +342,28 @@ function setupIPC() {
       return { success: true, path: result.filePath };
     }
     return { success: false };
+  });
+
+  // Get machine serial number
+  ipcMain.handle('get-serial', () => MACHINE_SERIAL);
+
+  // Validate device against ControlPanel
+  ipcMain.handle('validate-device', async (_, { controlPanelUrl, serialNo, branchId }) => {
+    try {
+      const url = `${controlPanelUrl}/api/Device/validate?serialNo=${encodeURIComponent(serialNo)}&branchId=${branchId}`;
+      const result = await makeRequest(url, {
+        headers: { 'Accept': 'application/json' },
+        timeout: 10000,
+      });
+      return result;
+    } catch (err) {
+      return { status: 0, data: null, error: err.message };
+    }
+  });
+
+  // Generate local password hash (for offline verification)
+  ipcMain.handle('generate-password', (_, { serialNo, companySettingId }) => {
+    return generatePasswordHash(serialNo, companySettingId);
   });
 }
 

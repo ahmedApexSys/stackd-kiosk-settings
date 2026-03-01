@@ -1,6 +1,6 @@
 /**
  * STACKD Kiosk Settings — Renderer (UI Logic)
- * Manages tabs, form state, API calls, and printer operations.
+ * Manages login, tabs, form state, API calls, and printer operations.
  */
 
 // ════════════════════════════════════════════════════════════
@@ -14,6 +14,8 @@ const State = {
   designs: [],
   menuData: null,       // full menu with item printers
   dirty: false,
+  machineSerial: null,  // auto-detected BIOS serial
+  validationData: null, // response from ControlPanel /validate
 };
 
 // ════════════════════════════════════════════════════════════
@@ -65,6 +67,7 @@ function flashSaveMsg() {
 // ════════════════════════════════════════════════════════════
 
 function settingsToForm(s) {
+  setVal('controlPanelUrl', s.controlPanelUrl || 'https://apex-control-panel.tryasp.net');
   setVal('apiBaseUrl', s.apiBaseUrl || '');
   setVal('apiKey', s.apiKey || '');
   setVal('branchId', s.branchId || '');
@@ -77,10 +80,15 @@ function settingsToForm(s) {
   setVal('idleTimeoutSec', Math.round((s.idleTimeoutMs || 120000) / 1000));
   setVal('menuRefreshSec', Math.round((s.menuRefreshMs || 300000) / 1000));
   setVal('defaultLocale', s.defaultLocale || 'en');
+
+  // Read-only fields
+  setVal('deviceSerial', s.deviceSerialNo || State.machineSerial || 'Unknown');
+  setVal('licenseExpiry', s.licenseExpiry ? new Date(s.licenseExpiry).toLocaleDateString() : 'N/A');
 }
 
 function formToSettings() {
   return {
+    controlPanelUrl: getVal('controlPanelUrl').replace(/\/+$/, '') || 'https://apex-control-panel.tryasp.net',
     apiBaseUrl: getVal('apiBaseUrl').replace(/\/+$/, ''),
     apiKey: getVal('apiKey'),
     branchId: parseInt(getVal('branchId')) || 1,
@@ -95,6 +103,10 @@ function formToSettings() {
     idleTimeoutMs: (parseInt(getVal('idleTimeoutSec')) || 120) * 1000,
     menuRefreshMs: (parseInt(getVal('menuRefreshSec')) || 300) * 1000,
     defaultLocale: getVal('defaultLocale') || 'en',
+    // Persisted validation data
+    deviceValidated: State.settings.deviceValidated || false,
+    deviceSerialNo: State.machineSerial || State.settings.deviceSerialNo || null,
+    licenseExpiry: State.settings.licenseExpiry || null,
   };
 }
 
@@ -130,15 +142,179 @@ async function apiPost(path, body) {
 }
 
 // ════════════════════════════════════════════════════════════
+// Login / Device Validation
+// ════════════════════════════════════════════════════════════
+
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideLoginError() {
+  const el = document.getElementById('loginError');
+  el.textContent = '';
+  el.style.display = 'none';
+}
+
+function showLoginLicense(data) {
+  const el = document.getElementById('loginLicenseInfo');
+  if (!data) { el.style.display = 'none'; return; }
+
+  const lines = [];
+  if (data.deviceName) lines.push(`Device: ${data.deviceName}`);
+  if (data.companyName) lines.push(`Company: ${data.companyName}`);
+  if (data.branchName) lines.push(`Branch: ${data.branchName}`);
+  if (data.expiryDate) {
+    const exp = new Date(data.expiryDate).toLocaleDateString();
+    lines.push(`Expires: ${exp} (${data.daysRemaining} days)`);
+  }
+
+  el.innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+  el.style.display = 'block';
+}
+
+function updateLicenseBadge(data) {
+  const badge = document.getElementById('licenseStatus');
+  const text = document.getElementById('licenseText');
+
+  if (!data || !data.valid) {
+    badge.style.display = 'none';
+    return;
+  }
+
+  badge.style.display = 'flex';
+  const remaining = data.daysRemaining || 0;
+
+  if (remaining > 30) {
+    text.textContent = `Licensed (${remaining}d)`;
+    badge.querySelector('.status-dot').className = 'status-dot online';
+  } else if (remaining > 0) {
+    text.textContent = `Expiring (${remaining}d)`;
+    badge.querySelector('.status-dot').className = 'status-dot warning';
+  } else {
+    text.textContent = 'License expired';
+    badge.querySelector('.status-dot').className = 'status-dot offline';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
 // App Actions
 // ════════════════════════════════════════════════════════════
 
 const App = {
 
-  // ─── Initialize ─────────────────────────────────────────
+  // ─── Login ──────────────────────────────────────────────
+  async login() {
+    hideLoginError();
+
+    const controlPanelUrl = getVal('loginControlPanelUrl').replace(/\/+$/, '');
+    const branchId = parseInt(getVal('loginBranchId')) || 1;
+    const serialNo = getVal('loginSerial');
+    const password = getVal('loginPassword');
+
+    if (!serialNo || serialNo === 'Detecting...' || serialNo === 'Unknown') {
+      showLoginError('Device serial number could not be detected. Cannot validate.');
+      return;
+    }
+
+    if (!password) {
+      showLoginError('Please enter the device password.');
+      return;
+    }
+
+    if (!controlPanelUrl) {
+      showLoginError('Please enter the Control Panel URL.');
+      return;
+    }
+
+    // Show loading state
+    const loginBtn = document.querySelector('.login-btn');
+    const origText = loginBtn.innerHTML;
+    loginBtn.innerHTML = '<span class="spinner"></span> Validating...';
+    loginBtn.disabled = true;
+
+    try {
+      // Call ControlPanel validate endpoint
+      const result = await window.settingsAPI.validateDevice(controlPanelUrl, serialNo, branchId);
+
+      if (result.error) {
+        showLoginError('Cannot reach Control Panel: ' + result.error);
+        loginBtn.innerHTML = origText;
+        loginBtn.disabled = false;
+        return;
+      }
+
+      if (result.status !== 200 || !result.data) {
+        showLoginError('Control Panel returned HTTP ' + result.status + '. Check URL and Branch ID.');
+        loginBtn.innerHTML = origText;
+        loginBtn.disabled = false;
+        return;
+      }
+
+      const data = result.data;
+      State.validationData = data;
+
+      // Show device info even if invalid
+      showLoginLicense(data);
+
+      if (!data.valid) {
+        showLoginError(data.message || 'Device validation failed.');
+        loginBtn.innerHTML = origText;
+        loginBtn.disabled = false;
+        return;
+      }
+
+      // Verify password: compare entered password with server's passwordHash
+      const enteredUpper = password.toUpperCase();
+      const serverHash = (data.passwordHash || '').toUpperCase();
+
+      if (enteredUpper !== serverHash) {
+        showLoginError('Incorrect password. Contact your administrator.');
+        loginBtn.innerHTML = origText;
+        loginBtn.disabled = false;
+        return;
+      }
+
+      // ─── Success! Unlock settings ───
+      State.settings.deviceValidated = true;
+      State.settings.deviceSerialNo = serialNo;
+      State.settings.controlPanelUrl = controlPanelUrl;
+      State.settings.licenseExpiry = data.expiryDate || null;
+
+      // Update license badge in sidebar
+      updateLicenseBadge(data);
+
+      // Hide login overlay, show app
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appContainer').style.display = '';
+
+      // Initialize the settings form
+      App.init();
+
+      showToast('Device validated. Welcome!', 'success');
+
+    } catch (err) {
+      showLoginError('Validation error: ' + (err.message || err));
+      loginBtn.innerHTML = origText;
+      loginBtn.disabled = false;
+    }
+  },
+
+  // ─── Initialize (after login) ─────────────────────────────
   async init() {
     try {
       State.settings = await window.settingsAPI.loadSettings();
+
+      // Merge in runtime validation data
+      if (State.validationData) {
+        State.settings.deviceValidated = true;
+        State.settings.deviceSerialNo = State.machineSerial;
+        State.settings.controlPanelUrl = State.settings.controlPanelUrl ||
+          getVal('loginControlPanelUrl') || 'https://apex-control-panel.tryasp.net';
+        State.settings.licenseExpiry = State.validationData.expiryDate || null;
+      }
+
       settingsToForm(State.settings);
       showToast('Settings loaded', 'info', 2000);
 
@@ -468,6 +644,7 @@ const App = {
   // ─── Reset Defaults ─────────────────────────────────────
   resetDefaults() {
     const defaults = {
+      controlPanelUrl: 'https://apex-control-panel.tryasp.net',
       apiBaseUrl: 'https://kiosk.tryasp.net',
       apiKey: 'wL2b7ci41AFlxXL2E2BC4k8xLAc4sqbKk4/wJ8ZVXTs=',
       branchId: 1,
@@ -672,7 +849,37 @@ function getDefaultDesigns() {
 }
 
 // ════════════════════════════════════════════════════════════
-// Boot
+// Boot — Show Login Overlay, Detect Serial
 // ════════════════════════════════════════════════════════════
 
-window.addEventListener('DOMContentLoaded', () => App.init());
+window.addEventListener('DOMContentLoaded', async () => {
+  // Detect machine serial number
+  try {
+    const serial = await window.settingsAPI.getSerial();
+    State.machineSerial = serial;
+    const loginSerialEl = document.getElementById('loginSerial');
+    if (loginSerialEl) {
+      loginSerialEl.value = serial || 'Unknown';
+    }
+  } catch (err) {
+    console.error('Failed to get serial:', err);
+    const loginSerialEl = document.getElementById('loginSerial');
+    if (loginSerialEl) loginSerialEl.value = 'Detection failed';
+  }
+
+  // Pre-fill login form from saved settings
+  try {
+    const saved = await window.settingsAPI.loadSettings();
+    if (saved.controlPanelUrl) {
+      setVal('loginControlPanelUrl', saved.controlPanelUrl);
+    }
+    if (saved.branchId) {
+      setVal('loginBranchId', saved.branchId);
+    }
+  } catch (e) {
+    // Ignore – just use defaults
+  }
+
+  // Login overlay is shown by default; app container hidden
+  // User must authenticate to proceed
+});

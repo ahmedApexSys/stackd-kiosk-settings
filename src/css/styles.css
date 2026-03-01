@@ -844,3 +844,86 @@ select {
   background: rgba(155, 89, 182, 0.15);
   color: #9b59b6;
 }
+
+/* ─── Login Overlay ──────────────────────────────────────── */
+
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.login-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px;
+  width: 420px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.login-logo {
+  width: 56px;
+  height: 56px;
+  background: var(--accent);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 28px;
+  color: #fff;
+  margin: 0 auto 16px;
+}
+
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.login-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.login-field {
+  text-align: left;
+  margin-bottom: 14px;
+}
+
+.login-field label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.login-field input {
+  width: 100%;
+}
+
+.login-error {
+  color: var(--accent);
+  font-size: 12px;
+  min-height: 18px;
+  margin-bottom: 8px;
+}
+
+.login-license-info {
+  font-size: 11px;
+  color: var(--accent-green);
+  min-height: 16px;
+  margin-bottom: 12px;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+}

@@ -18,4 +18,11 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   // Printer operations
   checkPrinter: (ip, port) => ipcRenderer.invoke('check-printer', { ip, port }),
   printTest: (ip, port) => ipcRenderer.invoke('print-test', { ip, port }),
+
+  // Device serial & validation
+  getSerial: () => ipcRenderer.invoke('get-serial'),
+  validateDevice: (controlPanelUrl, serialNo, branchId) =>
+    ipcRenderer.invoke('validate-device', { controlPanelUrl, serialNo, branchId }),
+  generatePassword: (serialNo, companySettingId) =>
+    ipcRenderer.invoke('generate-password', { serialNo, companySettingId }),
 });

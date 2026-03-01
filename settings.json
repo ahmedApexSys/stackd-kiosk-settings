@@ -1,4 +1,5 @@
 {
+  "controlPanelUrl": "https://apex-control-panel.tryasp.net",
   "apiBaseUrl": "https://kiosk.tryasp.net",
   "apiKey": "wL2b7ci41AFlxXL2E2BC4k8xLAc4sqbKk4/wJ8ZVXTs=",
   "branchId": 1,
@@ -12,5 +13,8 @@
   "taxPercent": 14,
   "idleTimeoutMs": 120000,
   "menuRefreshMs": 300000,
-  "defaultLocale": "en"
+  "defaultLocale": "en",
+  "deviceValidated": false,
+  "deviceSerialNo": null,
+  "licenseExpiry": null
 }

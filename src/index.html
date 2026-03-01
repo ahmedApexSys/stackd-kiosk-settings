@@ -7,7 +7,39 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <div class="app-container">
+
+  <!-- ═══ PASSWORD LOGIN OVERLAY ═══════════════════════════════ -->
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-box">
+      <div class="login-logo">S</div>
+      <h2 class="login-title">STACKD Kiosk Settings</h2>
+      <p class="login-subtitle">Enter device password to continue</p>
+
+      <div class="login-field">
+        <label>Control Panel URL</label>
+        <input type="text" id="loginControlPanelUrl" value="https://apex-control-panel.tryasp.net" placeholder="https://...">
+      </div>
+      <div class="login-field">
+        <label>Branch ID</label>
+        <input type="number" id="loginBranchId" value="1" min="1">
+      </div>
+      <div class="login-field">
+        <label>Device Serial Number</label>
+        <input type="text" id="loginSerial" readonly placeholder="Detecting...">
+      </div>
+      <div class="login-field">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter device password" onkeydown="if(event.key==='Enter')App.login()">
+      </div>
+      <div id="loginError" class="login-error"></div>
+      <div id="loginLicenseInfo" class="login-license-info"></div>
+      <button class="btn btn-primary login-btn" onclick="App.login()">
+        <span>&#128274;</span> Unlock Settings
+      </button>
+    </div>
+  </div>
+
+  <div class="app-container" id="appContainer" style="display:none;">
 
     <!-- ═══ Header ═══════════════════════════════════════════ -->
     <header class="header">
@@ -59,6 +91,10 @@
         </div>
 
         <div class="sidebar-footer">
+          <div class="status-badge mb-8" id="licenseStatus" style="display:none;">
+            <span class="status-dot online"></span>
+            <span id="licenseText">Licensed</span>
+          </div>
           <div class="status-badge" id="apiStatus">
             <span class="status-dot" id="apiStatusDot"></span>
             <span id="apiStatusText">Not connected</span>
@@ -77,7 +113,27 @@
           </div>
 
           <div class="card">
-            <div class="card-title"><span class="icon">&#127760;</span> Server</div>
+            <div class="card-title"><span class="icon">&#128274;</span> Control Panel</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Control Panel URL</label>
+                <input type="text" id="controlPanelUrl" placeholder="https://apex-control-panel.tryasp.net">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:none;width:300px;">
+                <label>Device Serial</label>
+                <input type="text" id="deviceSerial" readonly class="mono">
+              </div>
+              <div class="form-group" style="flex:none;width:200px;">
+                <label>License Expiry</label>
+                <input type="text" id="licenseExpiry" readonly>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span class="icon">&#127760;</span> Kiosk API Server</div>
             <div class="form-row">
               <div class="form-group">
                 <label>API Base URL</label>
