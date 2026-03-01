@@ -1,0 +1,41 @@
+{
+  "name": "stackd-kiosk-settings",
+  "version": "1.0.0",
+  "description": "STACKD Kiosk Settings — Configure printers, branch, menu, API connection, and item-to-printer mapping",
+  "author": "STACKD",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64",
+    "dev": "electron . --dev"
+  },
+  "build": {
+    "appId": "com.stackd.kiosk-settings",
+    "productName": "STACKD Kiosk Settings",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "src/**/*",
+      "settings.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "portable": {
+      "artifactName": "STACKD-Kiosk-Settings-${version}-portable.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^40.6.1",
+    "electron-builder": "^26.0.0"
+  }
+}

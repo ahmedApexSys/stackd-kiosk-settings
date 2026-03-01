@@ -1,0 +1,16 @@
+{
+  "apiBaseUrl": "https://kiosk.tryasp.net",
+  "apiKey": "wL2b7ci41AFlxXL2E2BC4k8xLAc4sqbKk4/wJ8ZVXTs=",
+  "branchId": 1,
+  "menuId": 2,
+  "deviceCode": "KIOSK-001",
+  "fawryBaseUrl": "http://localhost:5050",
+  "receiptPrinterId": null,
+  "chequeDesignCode": "CHEQUE_A",
+  "kitchenDesignCode": "KITCHEN_A",
+  "serviceChargePercent": 12,
+  "taxPercent": 14,
+  "idleTimeoutMs": 120000,
+  "menuRefreshMs": 300000,
+  "defaultLocale": "en"
+}

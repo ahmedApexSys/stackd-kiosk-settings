@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STACKD Kiosk Settings</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- ═══ Header ═══════════════════════════════════════════ -->
+    <header class="header">
+      <div class="header-left">
+        <div class="header-logo">S</div>
+        <div>
+          <div class="header-title">STACKD Kiosk Settings</div>
+          <div class="header-subtitle">Configure your kiosk deployment</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-outline btn-sm" onclick="App.importSettings()">
+          <span>&#128194;</span> Import
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="App.exportSettings()">
+          <span>&#128190;</span> Export
+        </button>
+      </div>
+    </header>
+
+    <div class="main-layout">
+
+      <!-- ═══ Sidebar ══════════════════════════════════════ -->
+      <nav class="sidebar">
+        <div class="sidebar-label">Configuration</div>
+        <div class="sidebar-section">
+          <button class="nav-item active" data-tab="connection">
+            <span class="icon">&#128279;</span> Connection
+          </button>
+          <button class="nav-item" data-tab="branch">
+            <span class="icon">&#127970;</span> Branch & Menu
+          </button>
+          <button class="nav-item" data-tab="printers">
+            <span class="icon">&#128424;</span> Printers
+          </button>
+          <button class="nav-item" data-tab="designs">
+            <span class="icon">&#127912;</span> Print Designs
+          </button>
+          <button class="nav-item" data-tab="itemprinters">
+            <span class="icon">&#128196;</span> Item Printers
+          </button>
+        </div>
+
+        <div class="sidebar-label">Tools</div>
+        <div class="sidebar-section">
+          <button class="nav-item" data-tab="advanced">
+            <span class="icon">&#9881;</span> Advanced
+          </button>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="status-badge" id="apiStatus">
+            <span class="status-dot" id="apiStatusDot"></span>
+            <span id="apiStatusText">Not connected</span>
+          </div>
+        </div>
+      </nav>
+
+      <!-- ═══ Content ══════════════════════════════════════ -->
+      <main class="content">
+
+        <!-- ─── Tab: Connection ─────────────────────────── -->
+        <div id="tab-connection" class="tab-panel active">
+          <div class="section-header">
+            <div class="section-title">API Connection</div>
+            <div class="section-desc">Configure the backend API URL and authentication key</div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span class="icon">&#127760;</span> Server</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>API Base URL</label>
+                <input type="text" id="apiBaseUrl" placeholder="https://kiosk.tryasp.net">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>API Key</label>
+                <input type="text" id="apiKey" placeholder="Your API key">
+              </div>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-primary" onclick="App.testConnection()">
+                <span>&#128268;</span> Test Connection
+              </button>
+              <span id="connectionResult" class="text-sm" style="line-height: 34px; margin-left: 8px;"></span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span class="icon">&#128179;</span> Fawry Payment Terminal</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Fawry Local URL</label>
+                <input type="text" id="fawryBaseUrl" placeholder="http://localhost:5050">
+              </div>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-outline btn-sm" onclick="App.testFawry()">
+                Test Fawry Health
+              </button>
+              <span id="fawryResult" class="text-sm" style="line-height: 34px; margin-left: 8px;"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── Tab: Branch & Menu ──────────────────────── -->
+        <div id="tab-branch" class="tab-panel">
+          <div class="section-header">
+            <div class="section-title">Branch & Menu</div>
+            <div class="section-desc">Set the branch, menu, and device code for this kiosk</div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span class="icon">&#127970;</span> Kiosk Identity</div>
+            <div class="form-row">
+              <div class="form-group w-auto">
+                <label>Branch ID</label>
+                <input type="number" id="branchId" placeholder="1" min="1">
+              </div>
+              <div class="form-group w-auto">
+                <label>Menu ID</label>
+                <input type="number" id="menuId" placeholder="2" min="1">
+              </div>
+              <div class="form-group">
+                <label>Device Code</label>
+                <input type="text" id="deviceCode" placeholder="KIOSK-001">
+              </div>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-outline btn-sm" onclick="App.fetchDevices()">
+                <span>&#128269;</span> Fetch Devices
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="App.verifyMenu()">
+                <span>&#9989;</span> Verify Menu
+              </button>
+            </div>
+          </div>
+
+          <div class="card" id="devicesCard" style="display:none;">
+            <div class="card-title"><span class="icon">&#128187;</span> Registered Devices</div>
+            <div id="devicesList"></div>
+          </div>
+
+          <div class="card" id="menuVerifyCard" style="display:none;">
+            <div class="card-title"><span class="icon">&#127860;</span> Menu Info</div>
+            <div id="menuInfo"></div>
+          </div>
+        </div>
+
+        <!-- ─── Tab: Printers ───────────────────────────── -->
+        <div id="tab-printers" class="tab-panel">
+          <div class="section-header">
+            <div class="section-title">Printers</div>
+            <div class="section-desc">Manage receipt and kitchen printers connected to this branch</div>
+          </div>
+
+          <div class="info-banner">
+            <span class="icon">&#128161;</span>
+            <div>
+              Printers are loaded from the server for the current branch.
+              Select a <strong>Receipt Printer</strong> for cheque/customer receipts.
+              Kitchen printers are assigned per item in the <em>Item Printers</em> tab.
+            </div>
+          </div>
+
+          <div class="flex-between mb-16">
+            <div></div>
+            <div class="btn-group">
+              <button class="btn btn-primary btn-sm" onclick="App.fetchPrinters()">
+                <span>&#128260;</span> Refresh Printers
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="App.checkAllPrinters()">
+                <span>&#128268;</span> Check All Status
+              </button>
+            </div>
+          </div>
+
+          <div id="printersContainer">
+            <div class="loading-overlay" id="printersLoading">
+              <div class="spinner"></div>
+              Loading printers...
+            </div>
+            <div id="printersList"></div>
+          </div>
+
+          <div class="card mt-24">
+            <div class="card-title"><span class="icon">&#9881;</span> Receipt Printer Assignment</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Selected Receipt Printer</label>
+                <select id="receiptPrinterId">
+                  <option value="">-- Select receipt printer --</option>
+                </select>
+              </div>
+            </div>
+            <p class="text-sm text-muted">This printer will be used for customer receipts (cheques) from this kiosk.</p>
+          </div>
+        </div>
+
+        <!-- ─── Tab: Designs ────────────────────────────── -->
+        <div id="tab-designs" class="tab-panel">
+          <div class="section-header">
+            <div class="section-title">Print Designs</div>
+            <div class="section-desc">Choose ESC/POS receipt designs for cheques and kitchen slips</div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span class="icon">&#129534;</span> Cheque / Receipt Design</div>
+            <p class="text-sm text-muted mb-16">Select the layout for customer receipts printed at checkout.</p>
+            <div class="design-grid" id="chequeDesigns"></div>
+          </div>
+
+          <div class="card mt-24">
+            <div class="card-title"><span class="icon">&#127859;</span> Kitchen Slip Design</div>
+            <p class="text-sm text-muted mb-16">Select the layout for kitchen order slips.</p>
+            <div class="design-grid" id="kitchenDesigns"></div>
+          </div>
+        </div>
+
+        <!-- ─── Tab: Item Printers ──────────────────────── -->
+        <div id="tab-itemprinters" class="tab-panel">
+          <div class="section-header">
+            <div class="section-title">Item-to-Printer Mapping</div>
+            <div class="section-desc">View which kitchen printer each menu item is routed to for order slips</div>
+          </div>
+
+          <div class="info-banner">
+            <span class="icon">&#128161;</span>
+            <div>
+              Items are split into separate kitchen slips based on their assigned printers.
+              For example: <strong>Bar items</strong> go to the bar printer, <strong>Shisha items</strong> to the shisha printer,
+              and <strong>Kitchen items</strong> to the main kitchen printer.
+              This mapping is configured in the admin system.
+            </div>
+          </div>
+
+          <div class="flex-between mb-16">
+            <div></div>
+            <button class="btn btn-primary btn-sm" onclick="App.fetchItemPrinters()">
+              <span>&#128260;</span> Load Menu with Printers
+            </button>
+          </div>
+
+          <div id="itemPrintersContainer">
+            <div class="empty-state" id="itemPrintersEmpty">
+              <div class="icon">&#128196;</div>
+              <p>Click "Load Menu with Printers" to view item-to-printer assignments</p>
+            </div>
+            <div id="itemPrintersList"></div>
+          </div>
+        </div>
+
+        <!-- ─── Tab: Advanced ───────────────────────────── -->
+        <div id="tab-advanced" class="tab-panel">
+          <div class="section-header">
+            <div class="section-title">Advanced Settings</div>
+            <div class="section-desc">Fine-tune kiosk behavior and business rules</div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span class="icon">&#128176;</span> Pricing & Tax</div>
+            <div class="form-row">
+              <div class="form-group w-auto">
+                <label>Service Charge (%)</label>
+                <input type="number" id="serviceChargePercent" min="0" max="100" step="0.1">
+              </div>
+              <div class="form-group w-auto">
+                <label>Tax (%)</label>
+                <input type="number" id="taxPercent" min="0" max="100" step="0.1">
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span class="icon">&#9200;</span> Timeouts</div>
+            <div class="form-row">
+              <div class="form-group w-auto">
+                <label>Idle Timeout (seconds)</label>
+                <input type="number" id="idleTimeoutSec" min="10" max="600" step="1">
+              </div>
+              <div class="form-group w-auto">
+                <label>Menu Refresh (seconds)</label>
+                <input type="number" id="menuRefreshSec" min="30" max="3600" step="1">
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><span class="icon">&#127760;</span> Locale</div>
+            <div class="form-row">
+              <div class="form-group w-auto">
+                <label>Default Language</label>
+                <select id="defaultLocale">
+                  <option value="en">English</option>
+                  <option value="ar">Arabic</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+    <!-- ═══ Save Bar ═════════════════════════════════════════ -->
+    <div class="save-bar">
+      <div class="save-bar-left">
+        <span class="save-msg" id="saveMsg">Settings saved successfully!</span>
+      </div>
+      <div class="save-bar-right">
+        <button class="btn btn-outline" onclick="App.resetDefaults()">
+          <span>&#8635;</span> Reset Defaults
+        </button>
+        <button class="btn btn-success" onclick="App.saveAll()">
+          <span>&#128190;</span> Save Settings
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <script src="js/renderer.js"></script>
+</body>
+</html>
