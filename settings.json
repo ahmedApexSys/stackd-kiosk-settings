@@ -1,8 +1,8 @@
 {
-  "controlPanelUrl": "https://apex-control-panel.tryasp.net",
+  "controlPanelUrl": "http://control-panel-api.premiumasp.net",
   "apiBaseUrl": "https://kiosk.tryasp.net",
   "apiKey": "wL2b7ci41AFlxXL2E2BC4k8xLAc4sqbKk4/wJ8ZVXTs=",
-  "branchId": 1,
+  "branchId": 2,
   "menuId": 2,
   "deviceCode": "KIOSK-001",
   "fawryBaseUrl": "http://localhost:5050",

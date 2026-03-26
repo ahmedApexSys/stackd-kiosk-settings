@@ -604,7 +604,7 @@ const App = {
     container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Loading full menu with printers...</div>';
 
     try {
-      const result = await apiGet(`/api/Menu/GetAll?MenuId=${menuId}&BranchId=${branchId}`);
+      const result = await apiGet(`/api/Menu/GetSelectedMenu?MenuId=${menuId}&BranchId=${branchId}`);
       const data = result.data?.data || result.data;
 
       if (!data || !data.categories) {

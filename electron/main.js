@@ -57,17 +57,29 @@ const MACHINE_SERIAL = getMachineSerialNumber();
 const SETTINGS_FILENAME = 'settings.json';
 
 function getSettingsPath() {
-  // 1. Same directory as executable (portable mode)
+  // 1. Same directory as executable (portable mode — writable folder)
   const exeDir = path.dirname(app.getPath('exe'));
   const portablePath = path.join(exeDir, SETTINGS_FILENAME);
-  if (fs.existsSync(portablePath)) return portablePath;
+  if (fs.existsSync(portablePath)) {
+    try { fs.accessSync(path.dirname(portablePath), fs.constants.W_OK); return portablePath; } catch {}
+  }
 
   // 2. App directory (development mode)
   const devPath = path.join(__dirname, '..', SETTINGS_FILENAME);
-  if (fs.existsSync(devPath)) return devPath;
+  if (fs.existsSync(devPath)) {
+    try { fs.accessSync(path.dirname(devPath), fs.constants.W_OK); return devPath; } catch {}
+  }
 
-  // 3. Default: create in exe directory
-  return portablePath;
+  // 3. userData folder (always writable — works in packaged/portable/asar modes)
+  const userDataPath = path.join(app.getPath('userData'), SETTINGS_FILENAME);
+  // Copy default settings from app bundle if first run
+  if (!fs.existsSync(userDataPath)) {
+    const bundledPath = path.join(__dirname, '..', SETTINGS_FILENAME);
+    if (fs.existsSync(bundledPath)) {
+      try { fs.copyFileSync(bundledPath, userDataPath); } catch {}
+    }
+  }
+  return userDataPath;
 }
 
 // Also write to Kiosk app's directory if it exists nearby
